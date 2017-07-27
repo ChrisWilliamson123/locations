@@ -1,15 +1,23 @@
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-from flask import Flask, redirect, render_template, request
+from flask import Flask, redirect, render_template, request, url_for
 from math import sin, cos, sqrt, atan2, radians
 import os, dateutil.parser, sys
 from settings import APP_STATIC
 from flask_socketio import SocketIO, emit
+from werkzeug.utils import secure_filename
+
+UPLOAD_FOLDER = 'src/media/kml_files'
+ALLOWED_EXTENSIONS = set(['kml'])
 
 app = Flask(__name__, static_url_path='/static')
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = 'secret!'
 app.coord_index = 0
 socketio = SocketIO(app)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def coord_distance(coord1, coord2):
 
@@ -53,37 +61,39 @@ def process_coords(soup):
     return co_ord_data
 
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def hello_world():
-    # socketio.run(app)
-    locations = open(os.path.join(APP_STATIC, 'holiday.kml'))
-    soup = BeautifulSoup(locations, 'xml')
-    print('Loaded file into soup...')
+    if request.method == 'POST':
+        request_copy = request
+        print(request.files)
+        print('here')
+        print(len(request.files))
+        print(request.files)
+        if 'locationsUpload' not in request.files:
+            print('File not in request')
+            return redirect(request.url)
+        file = request.files['locationsUpload']
 
-    app.full_data = process_coords(soup)
+        if file.filename == '':
+            print('No filename')
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            contents = file.read()
+            print('Sending data read message to ')
+            socketio.emit('data read')
 
-    # print(data)
 
+            # return redirect(url_for('hello_world', filename=filename))
+    # locations = open(os.path.join(APP_STATIC, 'holiday.kml'))
+    # soup = BeautifulSoup(locations, 'xml')
+    # print('Loaded file into soup...')
 
-    # print(times)
-    # print('Gathered coords...')
-    # app.real_coords = []
-    # app.real_times = []
-    # print('Converting coords...')
-    # for i in range(0, len(coords)):
-    #     c = coords[i]
-    #     d = dateutil.parser.parse(times[i].contents[0])
-    #     d = d.strftime('%d/%m/%Y %H:%M')
-    #     app.real_times.append(d)
-    #     split = c.contents[0].split(' ')
-    #     this_coord = (float(split[1]), float(split[0]))
-    #     if i == 0:
-    #         app.real_coords.append(this_coord)
-    #     else:
-    #         if app.real_coords[-1] != this_coord:
-    #             app.real_coords.append((split[1], split[0]))
-    # print(len(app.real_coords))
+    # app.full_data = process_coords(soup)
+
     return render_template('index.html')
+
+# @app.route('/map', methods)
 
 @socketio.on('data request', namespace='/test')
 def test_message():
@@ -107,6 +117,16 @@ def start_map(dates):
         start_date += timedelta(days=1)
 
     emit('data ready', app.current_data)
+
+@socketio.on('location filename', namespace='/test')
+def save_filename(filename):
+    app.locations_filename = filename
+    print('Saved filename: ' + filename)
+
+@socketio.on('location raw data', namespace='/test')
+def save_location_data(data):
+    app.location_data = data
+    print('Saved location data')
 
 if __name__ == '__main__':
     socketio.run(app)

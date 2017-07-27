@@ -1,0 +1,79 @@
+body {
+    font-family: helvetica;
+    font-weight: lighter;
+
+    h1 {
+        font-size: 30px;
+        margin-bottom: 20px;
+    }
+
+    h2 {
+        font-size: 20px;
+        margin-bottom: 15px;
+    }
+
+    label {
+        &.custom-file-upload {
+            background: none;
+            border: 2px solid white;
+            border-radius: 4px;
+            font-size: 15px;
+            color: white;
+            padding: 10px 20px;
+            transition: background 0.5s ease, color 0.5s ease;
+            cursor: pointer;
+            margin-top: 5px;
+            display: inline-block;
+
+            &:hover {
+                background: white;
+                color: black;
+            }
+        }
+    }
+
+    input {
+        background: none;
+        border: 2px solid white;
+        border-radius: 4px;
+        font-size: 15px;
+        color: white;
+        padding: 10px 20px;
+        transition: background 0.5s ease, color 0.5s ease;
+        cursor: pointer;
+        margin-top: 10px;
+
+        &:hover {
+            background: white;
+            color: black;
+        }
+
+        &[type="file"] {
+            display: none;
+        }
+    }
+}
+
+#map {
+    height: 400px;
+    width: 100%;
+}
+
+#mapContainer {
+    display: none;
+}
+
+#welcome {
+    background-image: url('/static/img/welcome-background.jpg');
+    background-size: cover;
+    height: 100vh;
+
+    #welcomeContent {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: white;
+    }
+}

@@ -1,6 +1,7 @@
 (function() {
     var coord_data;
     var last_slider_value;
+    var autoInterval;
     var socket = io.connect('http://' + document.domain + ':' + location.port + '/test');
     socket.on('connect', function() {
       // socket.emit('my event', {data: 'I\'m connected!'});
@@ -13,7 +14,7 @@
         console.log(parseFloat(data[0][0][1][0]));
         var first = new google.maps.LatLng(parseFloat(data[0][0][1][0]),parseFloat(data[0][0][1][1]));
         var second = new google.maps.LatLng(parseFloat(data[0][1][1][0]),parseFloat(data[0][1][1][1]));
-        current_bounds = map.getBounds()
+        current_bounds = map.getBounds();
         if (!current_bounds.contains(second)) {
             console.log('here');
             map.setCenter(first);
@@ -33,7 +34,7 @@
           map.setCenter(first);
         }
         else if (paths.length == 5) {
-          var removed = paths.shift()
+          var removed = paths.shift();
           removed.setMap(null);
         }
     });
@@ -49,7 +50,7 @@
         var first = new google.maps.LatLng(parseFloat(coord_data[value][1][0]),parseFloat(coord_data[value][1][1]));
         var second = new google.maps.LatLng(parseFloat(coord_data[value+1][1][0]),parseFloat(coord_data[value+1][1][1]));
 
-        current_bounds = map.getBounds()
+        current_bounds = map.getBounds();
         if (!current_bounds.contains(second)) {
             console.log('here');
             map.setCenter(first);
@@ -84,9 +85,67 @@
         console.log(coord_data);
         $('#timeSelector').attr('max', data.length-2);
         last_slider_value = 0;
-    })
+    });
 
     $('#goButton').click(function() {
         socket.emit('start', [$('#startDateSelector').val(), $('#endDateSelector').val()])
-    })
+    });
+
+    $('#autoButton').click(function() {
+        autoInterval = setInterval(function() {
+            var first = new google.maps.LatLng(parseFloat(coord_data[last_slider_value][1][0]),parseFloat(coord_data[last_slider_value][1][1]));
+            var second = new google.maps.LatLng(parseFloat(coord_data[last_slider_value+1][1][0]),parseFloat(coord_data[last_slider_value+1][1][1]));
+
+            current_bounds = map.getBounds();
+            if (!current_bounds.contains(second)) {
+                console.log('here');
+                map.setCenter(first);
+            }
+
+            coords = [first, second];
+            var flightPath = new google.maps.Polyline({
+              path: coords,
+              geodesic: true,
+              strokeColor: '#FF0000',
+              strokeOpacity: 1.0,
+              strokeWeight: 5
+            });
+            paths.push(flightPath);
+            flightPath.setMap(map);
+            $('h3').text(coord_data[last_slider_value][0]);
+            if (paths.length == 1) {
+              map.setCenter(first);
+            }
+            else if (paths.length == 5) {
+              var removed = paths.shift();
+              removed.setMap(null);
+            }
+            last_slider_value += 1;
+            $('#timeSelector').val(last_slider_value);
+        }, 200)
+    });
+
+    $('#stopButton').click(function() {
+        clearInterval(autoInterval);
+    });
+
+    socket.on('data read', function() {
+        console.log('Location data has been read');
+    });
+
+    $('#locationUploadSubmit').click(function() {
+        var file = $('#locationsUpload').get(0).files[0];
+        console.log(file);
+        socket.emit('location filename', file.name);
+
+        var reader = new FileReader();
+        var rawData = new ArrayBuffer();
+
+        reader.onload = function(e) {
+            rawData = e.target.result;
+            socket.emit('location raw data', rawData);
+        };
+
+        reader.readAsArrayBuffer(file);
+    });
 })();
